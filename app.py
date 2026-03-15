@@ -16,6 +16,7 @@ DATA_DIR  = os.path.join(BASE, "data")
 MAX_LENGTH = 128
 ID2LABEL   = {0: "SAFE", 1: "INJECTION"}
 HF_MODEL_ID = os.getenv("HF_MODEL_ID", "").strip()
+HF_MODEL_SUBFOLDER = os.getenv("HF_MODEL_SUBFOLDER", "").strip().strip("/")
 
 st.set_page_config(
     page_title="Prompt Injection Detector",
@@ -37,10 +38,40 @@ def _resolve_model_source():
 @st.cache_resource
 def load_model():
     model_source, local_only = _resolve_model_source()
-    tokenizer = AutoTokenizer.from_pretrained(model_source, local_files_only=local_only)
-    model = AutoModelForSequenceClassification.from_pretrained(model_source, local_files_only=local_only)
-    model.eval()
-    return tokenizer, model, model_source
+    if local_only:
+        tokenizer = AutoTokenizer.from_pretrained(model_source, local_files_only=True)
+        model = AutoModelForSequenceClassification.from_pretrained(model_source, local_files_only=True)
+        model.eval()
+        return tokenizer, model, model_source
+
+    # For Hugging Face model repos, try root first, then a subfolder fallback.
+    tried_locations = []
+    candidate_subfolders = []
+    if HF_MODEL_SUBFOLDER:
+        candidate_subfolders.append(HF_MODEL_SUBFOLDER)
+    candidate_subfolders.append("models/distilbert-injection")
+
+    try:
+        tried_locations.append(f"{model_source} (root)")
+        tokenizer = AutoTokenizer.from_pretrained(model_source)
+        model = AutoModelForSequenceClassification.from_pretrained(model_source)
+        model.eval()
+        return tokenizer, model, f"{model_source} (root)"
+    except Exception as first_err:
+        for subfolder in candidate_subfolders:
+            try:
+                tried_locations.append(f"{model_source}/{subfolder}")
+                tokenizer = AutoTokenizer.from_pretrained(model_source, subfolder=subfolder)
+                model = AutoModelForSequenceClassification.from_pretrained(model_source, subfolder=subfolder)
+                model.eval()
+                return tokenizer, model, f"{model_source}/{subfolder}"
+            except Exception:
+                continue
+        raise RuntimeError(
+            "Failed to load model from Hugging Face repo. Tried: "
+            + ", ".join(tried_locations)
+            + ". Set HF_MODEL_SUBFOLDER if your files are not at repo root."
+        ) from first_err
 
 def predict(text, tokenizer, model):
     enc = tokenizer(text, truncation=True, max_length=MAX_LENGTH, return_tensors="pt")
