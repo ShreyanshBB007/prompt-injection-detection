@@ -15,6 +15,7 @@ MODEL_DIR = os.path.join(BASE, "models", "distilbert-injection")
 DATA_DIR  = os.path.join(BASE, "data")
 MAX_LENGTH = 128
 ID2LABEL   = {0: "SAFE", 1: "INJECTION"}
+HF_MODEL_ID = os.getenv("HF_MODEL_ID", "").strip()
 
 st.set_page_config(
     page_title="Prompt Injection Detector",
@@ -23,12 +24,23 @@ st.set_page_config(
 )
 
 # ─── LOAD MODEL (cached so it only loads once) ───────────────
+def _resolve_model_source():
+    if os.path.isdir(MODEL_DIR):
+        return MODEL_DIR, True
+    if HF_MODEL_ID:
+        return HF_MODEL_ID, False
+    raise FileNotFoundError(
+        "No local model found at 'models/distilbert-injection' and HF_MODEL_ID is not set."
+    )
+
+
 @st.cache_resource
 def load_model():
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
-    model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR)
+    model_source, local_only = _resolve_model_source()
+    tokenizer = AutoTokenizer.from_pretrained(model_source, local_files_only=local_only)
+    model = AutoModelForSequenceClassification.from_pretrained(model_source, local_files_only=local_only)
     model.eval()
-    return tokenizer, model
+    return tokenizer, model, model_source
 
 def predict(text, tokenizer, model):
     enc = tokenizer(text, truncation=True, max_length=MAX_LENGTH, return_tensors="pt")
@@ -62,7 +74,18 @@ if page == "🔍 Live Detector":
     st.title("🛡️ Prompt Injection & Jailbreak Detector")
     st.markdown("Type any query below to check if it's a **safe** request or a **prompt injection attack**.")
 
-    tokenizer, model = load_model()
+    try:
+        tokenizer, model, model_source = load_model()
+        st.caption(f"Model source: {model_source}")
+    except Exception as e:
+        st.error("Model could not be loaded.")
+        st.info(
+            "Fix by either: (1) committing model files to models/distilbert-injection, "
+            "or (2) setting HF_MODEL_ID to a Hugging Face model repo that contains "
+            "your trained tokenizer + classifier."
+        )
+        st.code(str(e))
+        st.stop()
 
     # Single query
     st.subheader("Single Query Test")
