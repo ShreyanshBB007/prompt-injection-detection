@@ -1,0 +1,13 @@
+transformers==4.40.0
+datasets==2.19.0
+torch==2.2.2
+scikit-learn==1.4.2
+evaluate==0.4.1
+accelerate==0.29.3
+pandas==2.2.2
+matplotlib==3.8.4
+seaborn==0.13.2
+numpy==1.26.4
+tqdm==4.66.2
+imbalanced-learn==0.12.2
+bertviz==1.4.0

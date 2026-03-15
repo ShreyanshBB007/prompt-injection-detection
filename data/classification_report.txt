@@ -1,0 +1,11 @@
+Prompt Injection Classifier — Evaluation Report
+============================================================
+
+              precision    recall  f1-score   support
+
+        SAFE     0.9944    0.9943    0.9943     16563
+   INJECTION     0.9941    0.9942    0.9942     16153
+
+    accuracy                         0.9943     32716
+   macro avg     0.9943    0.9943    0.9943     32716
+weighted avg     0.9943    0.9943    0.9943     32716
