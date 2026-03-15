@@ -24,6 +24,85 @@ st.set_page_config(
     layout="wide"
 )
 
+st.markdown(
+    """
+    <style>
+    :root {
+        --app-bg: #06111c;
+        --panel-bg: #0d2236;
+        --panel-soft: #112a42;
+        --text-main: #e8f1fb;
+        --text-muted: #9eb5cb;
+        --accent: #1bb39a;
+        --accent-2: #26d6a7;
+        --danger: #ff5e7a;
+        --safe: #35c96f;
+        --border: #2a4058;
+    }
+
+    .stApp {
+        background:
+            radial-gradient(900px 500px at 90% -10%, #123154 0%, rgba(18, 49, 84, 0) 60%),
+            radial-gradient(700px 400px at -10% 0%, #15304a 0%, rgba(21, 48, 74, 0) 55%),
+            var(--app-bg);
+        color: var(--text-main);
+    }
+
+    h1, h2, h3, h4, h5, h6, p, li, label, span {
+        color: var(--text-main);
+    }
+
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, var(--panel-bg), #0b1b2d);
+        border-right: 1px solid var(--border);
+    }
+
+    [data-testid="stSidebar"] * {
+        color: var(--text-main);
+    }
+
+    [data-testid="stTextArea"] textarea,
+    [data-testid="stTextInput"] input {
+        background: rgba(13, 34, 54, 0.88) !important;
+        color: var(--text-main) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 10px !important;
+    }
+
+    .stButton > button {
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        color: #03281f !important;
+        border: 0;
+        border-radius: 10px;
+        font-weight: 700;
+    }
+
+    .stButton > button:hover {
+        filter: brightness(1.05);
+    }
+
+    [data-testid="stMetricValue"] {
+        color: var(--text-main);
+    }
+
+    [data-testid="stDataFrame"] {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    [data-testid="stAlert"] {
+        border-radius: 10px;
+    }
+
+    .stCaption {
+        color: var(--text-muted) !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # ─── LOAD MODEL (cached so it only loads once) ───────────────
 def _resolve_model_source():
     if os.path.isdir(MODEL_DIR):
@@ -168,10 +247,21 @@ if page == "🔍 Live Detector":
             df = pd.DataFrame(rows)
 
         def highlight_row(row):
-            color = '#ffcccc' if row['Label'] == 'INJECTION' else '#ccffcc'
-            return [f'background-color: {color}'] * len(row)
+            if row['Label'] == 'INJECTION':
+                bg, fg = '#5b1f2b', '#ffe7ed'
+            else:
+                bg, fg = '#173e2b', '#e6ffee'
+            return [f'background-color: {bg}; color: {fg}; font-weight: 600;'] * len(row)
 
-        st.dataframe(df.style.apply(highlight_row, axis=1), use_container_width=True)
+        styled_df = (
+            df.style
+            .apply(highlight_row, axis=1)
+            .set_table_styles([
+                {'selector': 'th', 'props': [('background-color', '#112a42'), ('color', '#dce8f5'), ('font-weight', '700')]},
+                {'selector': 'td', 'props': [('border-color', '#2a4058')]},
+            ])
+        )
+        st.dataframe(styled_df, use_container_width=True)
 
 # ─── PAGE 2: EDA CHARTS ──────────────────────────────────────
 elif page == "📊 EDA Charts":
